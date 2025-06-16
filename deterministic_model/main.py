@@ -68,23 +68,7 @@ def process_task(rsp):
     
     return llm_out_data, goal
 
-def process_scene(wires, terminals, llm_data):
-    target_terminal = llm_data["target_terminal"]
-    terminal_coords = terminals[target_terminal]["coordinates"]
-    matching_target_wires = [wire for wire in wires if wire["name"] == llm_data["target_wire"]]
-    
-    if len(matching_target_wires) > 1:
-        matching_target_wires.sort(key=lambda wire: euclidean_distance(wire["coordinates"], terminal_coords))
-    
-    target_wire = matching_target_wires[0]
-    
-    manipulated_wire = None # Assume potential for holding non-target wire
-    for wire in wires:
-        if wire["ID"] != target_wire["ID"] and wire["state"] == "held":
-            manipulated_wire = wire
-            break
-    
-    return target_wire, target_terminal, manipulated_wire  
+
 
 def make_json_serializable(obj):
     if isinstance(obj, (list, tuple)):
@@ -151,10 +135,9 @@ def main():
             
             wires = vision_dict["wires"] # list of dicts per wire 
             terminals = vision_dict["terminals"] # dict if dicts per terminal (terminal name is key (e.g. terminal_0))
-
-            true_target_wire, true_target_terminal, held_object = process_scene(wires, terminals, processed_llm_data)
             
-            model = DeterministicModel(true_target_wire, held_object)
+            model = DeterministicModel(wires, terminals)
+            true_target_wire, true_target_terminal, _ = model.process_scene(processed_llm_data)
             action = model.map_funciton()
             
             data_saver["predicted_action"] = [action]
