@@ -18,8 +18,8 @@ class GraphHeterogenous:
     def __init__(self, action_primitives, goal_states, vision_in, llm_in, label_in=None ):
         self.actions = action_primitives # Possible Predicted actions robot prims
         self.goal_states = goal_states # Possible goal states V_g (insert: terminal state for V_w; terminal state for V_t)
-        self.colors = ["red", "yellow", "blue", "green", "black", "white"] # Possible colors for V_w
-        self.pos_encoder = SpatialPositionalEncoding(20, in_dim=2) # Specify in_dim based on coordinate dimensions
+        self.colors = ["red", "yellow", "blue", "green", "black", "white", "orange"] # Possible colors for V_w
+        self.pos_encoder = SpatialPositionalEncoding(60, in_dim=3) # Specify in_dim based on coordinate dimensions
         
         # Retrieve LLM Data
         with open(llm_in, 'r') as llm_file:
@@ -60,8 +60,9 @@ class GraphHeterogenous:
         }   
         
         # Normalize object coordinates for positional encoding
-        all_wire_coords = [wire["coords"] for wire in self.wire_dict]   
-        all_coords = np.array(all_wire_coords + [self.terminal_dict["coords"]])
+        all_wire_coords = [wire["coords"][0] for wire in self.wire_dict] # Index into coords if includinge orientation
+        
+        all_coords = np.array(all_wire_coords + [self.terminal_dict["coords"][0]]) # Index into coords if includinge orientation
         norm_coords = self.normalize(all_coords)
         norm_wire_coords = norm_coords[:len(all_wire_coords)]
         norm_terminal_coords = norm_coords[len(all_wire_coords)] # Should only be last index of norm_coords
@@ -86,7 +87,7 @@ class GraphHeterogenous:
 
             #     print(self.match_coords(wire["coords"], wire_coords))
             matched_wire = next(
-                (wire for wire in self.wire_dict if self.match_coords(wire["coords"], wire_coords)),
+                (wire for wire in self.wire_dict if self.match_coords(wire["coords"][0], wire_coords)),
                 None
             )
 
@@ -99,7 +100,8 @@ class GraphHeterogenous:
                 "wire_color": wire_color,
                 "wire_color_idx": self.colors.index(wire_color),  # index in self.detected_wires
                 "wire_coords": label_data["target_wire"]["coordinates"],
-                "wire_id": matched_wire["id"],
+                "global_wire_id": matched_wire["id"],
+                "local_wire_id": None,
 
                 "terminal_id": tar_num,
                 "terminal_coords": label_data["target_terminal"]["coordinates"],
@@ -115,10 +117,12 @@ class GraphHeterogenous:
         self.edge_feature_encoding()
         self.create_node_masks()
     
-    def match_coords(self, a, b, tol=1e-5):
+    def match_coords(self, a, b, tol=1e-3):
         try:
-            a_arr = np.array(a, dtype=np.float64)
-            b_arr = np.array(b, dtype=np.float64)
+            a_arr = np.round(np.array(a, dtype=np.float64), decimals=4)
+            print(f"a {a_arr}")
+            b_arr = np.round(np.array(b, dtype=np.float64), decimals=4)
+            print(f" b { b_arr}")
             return np.allclose(a_arr, b_arr, atol=tol)
         except Exception as e:
             print(f"Coord matching failed for {a} vs {b} — {e}")
@@ -141,8 +145,8 @@ class GraphHeterogenous:
     
     def euclidean_distance(self, pos1, pos2):
         if type(pos1) == list and type(pos2) == list:
-            pos1 = torch.tensor(pos1, dtype=torch.float32) # Convert list to tensor
-            pos2 = torch.tensor(pos2, dtype=torch.float32) # Convert list to tensor
+            pos1 = torch.tensor(pos1, dtype=torch.float32) 
+            pos2 = torch.tensor(pos2, dtype=torch.float32) 
             return torch.norm(pos1 - pos2, p=2).item()
         else:
             return torch.norm(pos1 - pos2, p=2).item()
@@ -165,6 +169,8 @@ class GraphHeterogenous:
                     f = [1., 0.]
                     f.extend(wire_positions[w,:].tolist())
                 X_wires.append(f)
+                if wire["id"] == self.label_info["global_wire_id"]:
+                    self.label_info["local_wire_id"] = len(X_wires)-1             
         self.X_wires = X_wires
         
         # Terminal features
@@ -173,7 +179,7 @@ class GraphHeterogenous:
         self.X_terminals = f_term
         
     def edge_index_adj_matrix(self):
-        num_w = len(self.wire_dict)
+        num_w = len(self.X_wires)
         num_t = 1
         edge_index = []
 
@@ -219,8 +225,6 @@ class GraphHeterogenous:
         self.wire_mask[:num_w] = True
         self.terminal_mask[num_w:num_w + num_t] = True
         
-        
-
     def get_wire_encodings(self):
         return torch.tensor(self.X_wires)
 
@@ -238,7 +242,8 @@ class GraphHeterogenous:
         return self.adj_matrix
 
     def get_labels(self):
-        return (torch.tensor([self.label_info["wire_id"]]),
+        return (torch.tensor([self.label_info["global_wire_id"]]),
+                torch.tensor([self.label_info["local_wire_id"]]),
                 torch.tensor(self.label_info["action_one_hot"]))
 
     def get_wire_positions(self):
@@ -246,8 +251,7 @@ class GraphHeterogenous:
 
     def get_terminal_positions(self):
         return torch.tensor([terminal["normalized_coords"] for terminal in self.terminal_dict])
-
-
+    
     def get_edge_attr(self):
         return self.edge_attr
 

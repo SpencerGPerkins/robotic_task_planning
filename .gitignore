@@ -3,4 +3,9 @@
 **/synthetic_testing_data/** 
 Papers/** 
 **/pddl_comp_data/** 
-**/__pycache__/** 
+**/__pycache__/**
+**/eda/**
+**.pth
+**.png
+
+ 

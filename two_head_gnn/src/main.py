@@ -38,20 +38,17 @@ def load_dataset(vision_path, llm_path, label_path, num_data_samples):
         terminal_encodings = graph.get_terminal_encodings()
 
         x = torch.cat([wire_encodings, terminal_encodings.unsqueeze(0)])
-        print(f"Length of x: {len(x)}")
         
         edge_index = graph.get_edge_index()
         edge_attr = graph.get_edge_attr()
-        y_wire, y_action = graph.get_labels()
-        print(f"wire label : {y_wire}")
-        print(f"Action Label: {y_action}")
-    
+        y_wire_global, y_wire_local,  y_action = graph.get_labels()
         
         data_list.append(Data(
             x=x,
             edge_index=edge_index,
             edge_attr=edge_attr,
-            y_wire=y_wire.unsqueeze(0),
+            y_wire_global=y_wire_global.unsqueeze(0),
+            y_wire_local=y_wire_local.unsqueeze(0),
             y_action=y_action.unsqueeze(0),
             wire_mask=graph.wire_mask,
             terminal_mask=graph.terminal_mask,
@@ -72,7 +69,6 @@ def train(model, loader, optimizer, criterion, device):
     all_action_preds, all_action_labels = [], []
     
     for data in loader:
-        print(f"sample_{data.graph_id.item()}")
         # Node type masks
         wire_mask = data.wire_mask
         terminal_mask = data.terminal_mask
@@ -85,27 +81,21 @@ def train(model, loader, optimizer, criterion, device):
         wire_logits, action_logits = model(
             data.x.float(), wire_mask, data.edge_index, data.edge_attr, data.batch
         )
-        print(torch.tensor(data.y_wire.squeeze()).to(device))
-        wire_label =torch.tensor(data.y_wire.squeeze()).to(device)
+        wire_label_local =torch.tensor(data.y_wire_local.squeeze()).to(device)        
         action_label = torch.tensor(data.y_action).float().to(device)
         if action_label.ndim == 2: # Shape [B, 4]
             action_label = action_label.argmax(dim=1)
         else: # Shape [4]
             action_label = action_label.unsqueeze(0).argmax(dim=1)
-        
-        print("Labels min:", wire_label.min().item())
-        print("Labels max:", wire_label.max().item())
-        print("Labels shape:", wire_label.shape)
-        print(f"wire label : {wire_label}")
-        print(f"wire predict: {wire_logits}")
+
+
 
         # Loss weights
-        wire_weight = 2.0
-        action_weight = 1.0
-        print(wire_logits.dtype, wire_label.dtype)
+        wire_weight = 1.0
+        action_weight = 2.0
+
         # Compute Loss
-        wire_loss = criterion(wire_logits, wire_label)
-        print(f"Wire Loss {wire_loss}")
+        wire_loss = criterion(wire_logits, wire_label_local)
         action_loss = criterion(action_logits, action_label)
         epoch_action_loss += action_loss.item()
         
@@ -118,12 +108,13 @@ def train(model, loader, optimizer, criterion, device):
         total_loss += loss.item()
         
         # Predictions
-        print(f"Prediciton: {wire_logits.argmax().item()}")
-        print(f"With Mask: {wire_mask_idx[wire_logits.argmax().item()]}")
-        wire_pred_global = wire_mask_idx[wire_logits.argmax().item()].item() 
-        wire_label_global = wire_mask_idx[wire_label.item()].item()
-        all_wire_preds.append(wire_pred_global)
-        all_wire_labels.append(wire_label_global)
+
+        wire_pred_local = wire_logits.argmax().item()
+        wire_label_local = wire_label_local.item()
+        # wire_pred_local = wire_mask_idx[wire_logits.argmax().item()].item() 
+        # wire_label_local = wire_mask_idx[wire_label_local.item()].item()
+        all_wire_preds.append(wire_pred_local)
+        all_wire_labels.append(wire_label_local)
         all_action_preds.append(action_logits.argmax().item())
         all_action_labels.append(action_label.item())
         
@@ -153,7 +144,6 @@ def validate(model, loader, criterion, device):
     
     with torch.no_grad():
         for data in loader:
-            print(f"sample_{data.graph_id.item()}")
             # Node type masks
             wire_mask = data.wire_mask
             terminal_mask = data.terminal_mask
@@ -165,17 +155,24 @@ def validate(model, loader, criterion, device):
             wire_logits, action_logits = model(
                 data.x.float(), wire_mask, data.edge_index, data.edge_attr, data.batch
             )    
-            
-            wire_label = torch.tensor(data.y_wire.item()).to(device)
-            action_label = torch.tensor(data.y_wire.item()).to(device)
-            print(action_label.shape)
-            action_label = action_label.argmax(dim=1).long()
-                        
+            print(action_logits)
+            wire_label_local =torch.tensor(data.y_wire_local.squeeze()).to(device) 
+            action_label = torch.tensor(data.y_action).float().to(device)
+            print(action_label)
+            if action_label.ndim == 2: # Shape [B, 4]
+                action_label = action_label.argmax(dim=1)
+                print(f"if {action_label}")
+                print(action_logits.argmax().item())
+            else: # Shape [4]
+                action_label = action_label.unsqueeze(0).argmax(dim=1)
+                print(f"else {action_label}")
+                print(action_logits.argmax().item())
+                            
             # Loss weights
-            wire_weight = 2.0
-            action_weight = 1.0
+            wire_weight = 1.0
+            action_weight = 2.0
             
-            wire_loss = criterion(wire_logits, wire_label)
+            wire_loss = criterion(wire_logits, wire_label_local)
             epoch_val_wire_loss += wire_loss.item()
             action_loss = criterion(action_logits, action_label)
             epoch_val_action_loss += action_loss.item()
@@ -184,11 +181,10 @@ def validate(model, loader, criterion, device):
             total_loss += loss.item()
             
             # Predictions
-            wire_pred_global = wire_mask_idx[wire_logits.argmax().item()].item() 
-            wire_label_global = wire_mask_idx[wire_label.item()].item()
-            
-            all_wire_preds.append(wire_pred_global)
-            all_wire_labels.append(wire_label_global)
+            wire_pred_local = wire_logits.argmax().item()
+            wire_label_local = wire_label_local.item()
+            all_wire_preds.append(wire_pred_local)
+            all_wire_labels.append(wire_label_local)
             all_action_preds.append(action_logits.argmax().item())
             all_action_labels.append(action_label.item())
             
@@ -226,13 +222,13 @@ def main():
         "action_val_loss": []  
     }  
     
-    vision_data = "../synthetic_data/4_class/vision/"
-    llm_data = "../synthetic_data/4_class/llm/"
-    label_data = "../synthetic_data/4_class/labels/"
+    vision_data = "../../dataset/synthetic_data/vision/"
+    llm_data = "../../dataset/synthetic_data/llm/"
+    label_data = "../../dataset/synthetic_data/labels/"
     
     print("\n\nLoading Data...\n\n")
     
-    dataset = load_dataset(vision_data, llm_data, label_data, num_data_samples=20)
+    dataset = load_dataset(vision_data, llm_data, label_data, num_data_samples=200)
     dataset_size = len(dataset)
     train_size = int(0.8 * dataset_size)
     val_size = len(dataset) - train_size
@@ -245,8 +241,9 @@ def main():
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = TwoHeadGAT(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=64, num_actions=4).to(device)
-    
+    #/home/spencer/Documents/research/hucenrotia_lab/working_directory/task_plan/working_dir/two_head_gnn/
     checkpoint_path = "TwoHeadGAT_4class_0609.pth"
+    print("Exists:", os.path.exists(checkpoint_path))
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         model_dict = model.state_dict()    
@@ -262,12 +259,12 @@ def main():
     criterion = torch.nn.CrossEntropyLoss()
     
     # Epoch Loop
-    for epoch in tqdm(range(2), desc="training Epochs"):
+    for epoch in tqdm(range(500), desc="training Epochs"):
         train_loss, wire_acc, wire_f1, wire_loss, action_acc, action_f1, action_loss = train(model, train_loader, optimizer, criterion, device=device)
         val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss = validate(model, val_loader, criterion, device=device)
         
         print(f"\nEpoch {epoch+1}:\nTraining loss {train_loss:.4f},\nWire Acc {wire_acc:.4f}, Wire F1 {wire_f1:.4f}, Wire Loss {wire_loss:.4f},\nAction Acc {action_acc:.4f}, Action F1 {action_f1:.4f}, Action Loss {action_loss:.4f}")
-        print(f"\nEpoch {epoch+1}: \nValidation Loss {val_loss:.4f},\nWire Val Acc {wire_val_acc:.4f}, Wire Val F1 {wire_val_f1:.4f}, Wire Val Loss {wire_val_loss:.4f},\nAction Val Acc {action_val_acc:.4f}, Action Val F1 {action_val_f1:.4f}, Action Val Loss {action_val_loss:.4f}")
+        print(f"--------------- \nValidation Loss {val_loss:.4f},\nWire Val Acc {wire_val_acc:.4f}, Wire Val F1 {wire_val_f1:.4f}, Wire Val Loss {wire_val_loss:.4f},\nAction Val Acc {action_val_acc:.4f}, Action Val F1 {action_val_f1:.4f}, Action Val Loss {action_val_loss:.4f}")
         training_results["epoch"].append(epoch)
         training_results["train_loss"].append(train_loss)
         training_results["wire_train_acc"].append(wire_acc)
@@ -285,7 +282,7 @@ def main():
         training_results["action_val_loss"].append(action_val_loss) 
         
     # Save the model
-    torch.save(model.state_dict(), "TwoHeaGAT_4class_0609.pth")   
+    torch.save(model.state_dict(), "TwoHeadGAT_4class_0609.pth")   
     print("Model weights saved.")
     results_df = pd.DataFrame.from_dict(training_results)
     results_path = f"../docs/TwoHead_training_results/TwoHeadGAT_{year}_{month}_{day}"

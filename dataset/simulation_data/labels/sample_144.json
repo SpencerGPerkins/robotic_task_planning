@@ -1,0 +1,1 @@
+{"target_wire": {"ID": 1, "name": "green_wire", "color": "green", "coordinates": [[0.4606264531612396, 0.44096776843070984, 0.0025102405343204737]]}, "target_terminal": {"name": "terminal_6", "coordinates": [[2.68166, 1.32, 10.164419999999566]]}, "correct_action": "pick"}
