@@ -184,7 +184,8 @@ def main(plot=True):
     hist = SimHist()
     file_names = ["vision", "labels"]
     # file_names = ["vision"]
-    pth = "../dataset/19.06_2/"
+    pth = "../dataset/19.06_2_cleantest/"
+    
     
     # Process Vision and labels files
     for filename in file_names:
