@@ -4,6 +4,17 @@ EDA for data collected via Isaac Sim (using deterministic action prediction mode
 
 Simulation = full task (e.g. goal=lock, simulation=[pick,insert,lock])
 
+## Script Details: ##
+
+SimHist stores simulation details, all xyz coords collected from data directories (vision, labels, end_sim_state)
+        Computes mean vectors and covariance matrices from labels file for analysis
+
+Script produces the following saved files:
+xyz distribution plots for vision, labels, and end_sim_state (optional show and save)
+
+json file for EDA of labels
+json files for wire and terminal coordinates
+
 """
 import torch
 import matplotlib.pyplot as plt
