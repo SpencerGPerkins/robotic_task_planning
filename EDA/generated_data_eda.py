@@ -57,14 +57,6 @@ class SimHist:
             for d in range(num_files):
                 with open(f"{pth}{file_name}/sample_{d}.json", "r") as v_in:
                     file = json.load(v_in)
-                # current_sim = file["metadata"]["simulation_id"]
-                # if current_sim != previous_sim:
-                #     self.simulation_length.append(sim_len_counter)
-                #     self.final_iter_idx.append(d)
-                #     previous_sim = current_sim
-                #     sim_len_counter = 0
-                # else:
-                #     sim_len_counter += 1
 
                 for wire in file[wire_key]: # Get all wire coords
                     if wire["state"] == "on_table":
@@ -144,7 +136,7 @@ def vision_labels_eda(table_pts, held_pts, inserted_pts, terminal_pts, save_file
     for p in range(len(held_pts)):
         ax.scatter(held_pts[p][0], held_pts[p][1], held_pts[p][2], c="green")  
     for p in range(len(inserted_pts)):
-        ax.scatter(inserted_pts[p][0], inserted_pts[p][1], inserted_pts[p][2], c="yellow")  
+        ax.scatter(inserted_pts[p][0], inserted_pts[p][1], inserted_pts[p][2], c="yellow")
     for p in range(len(terminal_pts)):
         ax.scatter(terminal_pts[p][0], terminal_pts[p][1], terminal_pts[p][2], c="blue")  
 
@@ -186,8 +178,6 @@ def main(plot=True):
     hist = SimHist()
     # file_names = ["vision", "labels"]
     file_names = ["vision"]
-    # file_names = ["vision"]
-    # pth = "../dataset_lenovo/19.06_2_cleantest/"
     pth = "../dataset/generated_synthetic_dataset/"
     
     

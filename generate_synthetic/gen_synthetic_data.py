@@ -10,16 +10,23 @@ class SyntheticData:
         self.on_table_dist = on_table_dist
         self.held_dist = held_dist
         self.wire_colors = ["blue", "black", "yellow", "white", "orange", "green", "red"]
-        self.terminals = ["terminal_0", "terminal_1", "terminal_2", "terminal_3", "terminal_4", "terminal_5", "terminal_6", "terminal_7", "terminal_8"]
+        self.terminals = [
+            "terminal_0", "terminal_1", 
+            "terminal_2", "terminal_3", 
+            "terminal_4", "terminal_5", 
+            "terminal_6", "terminal_7", 
+            "terminal_8"
+            ]
         self.terminal_coords = terminal_coords
-        
-    def generate_pick_vision(self, num_samples):
+ 
+    def generate_pick_vision(self, num_samples, start_samp_num):
         for n in range(num_samples):
+            num_samp = n + start_samp_num
             vision_dict = {
                 "wires": [],
                 "terminals": {}
-            }
-                 
+                "sample_label": "pick"
+            }      
             num_wires = random.randint(3, 20)
             for w in range(num_wires):
                 color = random.choice(self.wire_colors)
@@ -35,10 +42,98 @@ class SyntheticData:
             for t, term_key in enumerate(self.terminals):
                 vision_dict["terminals"][term_key] = {"state": "empty", "coordinates": self.terminal_coords[t]}
             
-            with open(f"../dataset/generated_synthetic/vision/sample_{n}.json", "w") as out_file:
+            with open(f"../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json", "w") as out_file:
                 json.dump(vision_dict, out_file)
-            print(f"Sample_{n} saved to ../dataset/generated_synthetic/vision/sample_{n}.json")
-                
+            print(f"Sample_{num_samp} saved to ../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json")
+
+    def generate_insert_vision(self, num_samples, start_samp_num):
+        for n in range(num_samples):
+            num_samp = n + start_samp_num
+            vision_dict = {
+                "wires": [],
+                "terminals": {},
+                "sample_label": "insert"
+            }
+
+            num_wires = random.randint(3, 20)
+            held_wire_idx = random.randint(0, num_wires)
+
+            for w in range(num_wires):
+                color = random.choice(self.wire_colors)
+                if w == held_wire_idx:
+                    coords = self.held_dist.sample(n=1)
+                    wire = {
+                        "id": w,
+                        "name": f"{color}_wire",
+                        "color": color,
+                        "state": "held",
+                        "coordinates": coords.tolist()
+                    }
+                    vision_dict["wires"].append(wire)
+                else: 
+                    color = random.choice(self.wire_colors)
+                    coords = self.on_table_dist.sample(n=1)
+                    wire = {
+                        "id": w,
+                        "name": f"{color}_wire",
+                        "color": color,
+                        "state": "on_table",
+                        "coordinates": coords.tolist()
+                    }
+                    vision_dict["wires"].append(wire)
+            for t, term_key in enumerate(self.terminals):
+                vision_dict["terminals"][term_key] = {"state": "empty", "coordinates": self.terminal_coords[t]}
+            
+            with open(f"../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json", "w") as out_file:
+                json.dump(vision_dict, out_file)
+            print(f"Sample_{num_samp} saved to ../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json")
+    
+    def generate_lock_vision(self, num_samples, start_samp_num):
+        for n in range(num_samples):
+            num_samp = n + start_samp_num
+            vision_dict = {
+                "wires": [],
+                "terminals": {}
+                "sample_label": "lock"
+            }
+
+            num_wires = random.randint(3, 20)
+            inserted_wire_idx = random.randint(0, num_wires)
+            inserted_term_idx = random.randint(0, 8)
+            for t, term_key in enumerate(self.terminals):
+                if t == inserted_term_idx:
+                    vision_dict["terminals"][term_key] = {"state": "inserted", "coordinates": self.terminal_coords[t]}
+                    inserted_wire_coords = self.terminal_coords[t]
+                else:
+                    vision_dict["terminals"][term_key] = {"state": "empty", "coordinates": self.terminal_coords[t]}
+
+            for w in range(num_wires):
+                color = random.choice(self.wire_colors)
+                if w == inserted_wire_idx:
+                    wire = {
+                        "id": w,
+                        "name": f"{color}_wire",
+                        "color": color,
+                        "state": "inserted",
+                        "coordinates": [inserted_wire_coords[0]+0.005, inserted_wire_coords[1], inserted_wire_coords[2]]
+                    }
+                    vision_dict["wires"].append(wire)
+                else: 
+                    color = random.choice(self.wire_colors)
+                    coords = self.on_table_dist.sample(n=1)
+                    wire = {
+                        "id": w,
+                        "name": f"{color}_wire",
+                        "color": color,
+                        "state": "on_table",
+                        "coordinates": coords.tolist()
+                    }
+                    vision_dict["wires"].append(wire)
+            
+            with open(f"../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json", "w") as out_file:
+                json.dump(vision_dict, out_file)
+            print(f"Sample_{num_samp} saved to ../dataset/generated_synthetic_dataset/vision/sample_{num_samp}.json")    
+
 def get_max_likelihood(matrix):
     mean_vector = torch.mean(matrix, dim=0) # Mean for columns (xyz)
     covariance_mat = torch.cov(matrix.T) # Transpose, cov matrix dims should be (3,3)
@@ -69,8 +164,6 @@ def process_file(vision_pth, num_files=100):
             
     return table_wirepoints, held_wirepoints, inserted_wirepoints, terminalpoints
 
-
-
 def main():
     wire_colors = ["blue", "black", "yellow", "white", "orange", "green", "red"]
     terminals = ["terminal_0", "terminal_1", "terminal_2", "terminal_3", "terminal_4", "terminal_5", "terminal_6", "terminal_7", "terminal_8"]
@@ -79,14 +172,15 @@ def main():
     with open(f"{vision_pth}sample_0.json", "r") as term_vis_file:
         vis = json.load(term_vis_file)
     terminal_coords = []
-    term_keys = list(vis["terminals"].keys())
-    for t in term_keys:
-        terminal_coords.append(vis["terminals"][t]["coordinates"][0])
+
+    # Get fixed terminal coordinaes
+    for key, value in vis["terminals"].items():
+        terminal_coords.append(key["coordinates"])
     
+    # Process reference dataset, generate max-likelihood for distributions
     table_wirepoints, held_wirepoints, _, terminal_points = process_file(vision_pth)
     table_mean_vector, table_covariance_mat = get_max_likelihood(torch.stack(table_wirepoints))
     held_mean_vector, held_covariance_mat = get_max_likelihood(torch.stack(held_wirepoints))
-    # term_mean_vector, term_covariance_mat = get_max_likelihood(torch.stack(terminal_points))
     
     # Truncated Multivariate Normal distributions for on_table wires, held wires
     lb = np.array([-1000, -1000, 0.0])
@@ -95,11 +189,14 @@ def main():
     ub_term = np.array([1000, 1000, 0.045])
     trunc_table_dist = TruncatedMVN(table_mean_vector.cpu().numpy(), table_covariance_mat.cpu().numpy(), lb=lb, ub=ub)
     trunc_held_dist = TruncatedMVN(held_mean_vector.cpu().numpy(), held_covariance_mat.cpu().numpy(), lb=lb_held, ub=ub)
-    # trunc_term_dist = TruncatedMVN(term_mean_vector.cpu().numpy(), term_covariance_mat.cpu().numpy(), lb=lb, ub=ub_term)
     
+    # Initialize SyntheticData class with distributions
     sim_data = SyntheticData(trunc_table_dist, trunc_held_dist, terminal_coords)
     
-    sim_data.generate_pick_vision(num_samples=500)
+    # Generate Samples
+    sim_data.generate_pick_vision(num_samples=50, start_samp_num=0)
+    sim_data.generate_insert_vision(num_samples=50, start_samp_num=50)
+    sim_data.generate_lock_vision(num_samples=50, start_samp_num=100)
     
 if __name__ == "__main__":
     main()

@@ -1,1 +1,0 @@
-{"target_wire": {"ID": 2, "name": "black_wire", "color": "black", "coordinates": [[0.3635459542274475, 0.3482784926891327, 0.08485643565654755]]}, "target_terminal": {"name": "terminal_1", "coordinates": [[-2.55781, 1.32, 10.164419999999566]]}, "correct_action": "insert"}
