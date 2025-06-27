@@ -1,0 +1,7 @@
+,precision,recall,f1-score,support
+Pick,1.0,1.0,1.0,14.0
+Insert,1.0,1.0,1.0,16.0
+Lock,1.0,1.0,1.0,20.0
+accuracy,1.0,1.0,1.0,1.0
+macro avg,1.0,1.0,1.0,50.0
+weighted avg,1.0,1.0,1.0,50.0
