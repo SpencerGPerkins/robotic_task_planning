@@ -1,0 +1,31 @@
+project_root/
+│
+├── main.py                        # Entry point to run graph creation pipeline
+├── config.py                      # central location for hyperparameters and paths
+├── train_val.py                   # Training and validation loops
+│
+├── data_process/
+│   ├── __init__.py
+│   ├── data_loader.py            # load dataset in main
+│   ├── open_file.py              # open_helper and data validation
+│   ├── preprocess.py             # normalization, coordinate matching, parsing logic
+│
+├── features/
+│   ├── __init__.py
+│   ├── pos_encoding.py           # positional encoder (frequency encoding)
+│   ├── node_features.py          # wire and terminal node feature creation
+│   ├── edge_features.py          # edge_index, edge_attr, adj_matrix
+│
+├── graph/
+│   ├── __init__.py
+│   ├── graph_constructor.py      # TaskGraphHeterogenous main logic (refactored)
+│
+├── models/
+│   ├── __init__.py
+│   ├── TwoHeadGAT.py             # GAT model architecture for obj / action prediction
+├── utils/
+│   ├── __init__.py
+│   ├── coords.py                  # match_coords, normalize
+│   ├── load_model_checkpoint.py   # Load pretrained weights in main
+│   ├── one_hot.py                 # One-hot encode for actions
+

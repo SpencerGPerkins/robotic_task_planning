@@ -68,16 +68,16 @@ class SimHist:
 
                 for wire in file[wire_key]: # Get all wire coords
                     if wire["state"] == "on_table":
-                        self.wire_points[file_name]["table_wirepoints"].append(wire["coordinates"])
+                        self.wire_points[file_name]["table_wirepoints"].append(wire["position"])
                     elif wire["state"] == "held":
-                       self. wire_points[file_name]["held_wirepoints"].append(wire["coordinates"])
+                       self. wire_points[file_name]["held_wirepoints"].append(wire["position"])
                     elif wire["state"] == "inserted":
-                        self.wire_points[file_name]["inserted_wirepoints"].append(wire["coordinates"])
+                        self.wire_points[file_name]["inserted_wirepoints"].append(wire["position"])
                     else:
                         raise ValueError("Unkown state found in wires...")
                 term_keys = list(file[terminal_key].keys())
                 for key in term_keys:
-                    self.terminal_points[file_name]["terminalpoints"].append(file["terminals"][key]["coordinates"])
+                    self.terminal_points[file_name]["terminalpoints"].append(file["terminals"][key]["position"])
                     
             return self.wire_points[file_name], self.terminal_points[file_name]
         
@@ -95,21 +95,21 @@ class SimHist:
                     file = json.load(v_in)
                 if file["correct_action"] == "pick":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["table_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["table_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["table_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["table_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 elif file["correct_action"] == "insert" or file["correct_action"] == "putdown":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["held_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["held_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["held_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["held_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 elif file["correct_action"] == "lock":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["inserted_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["inserted_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["inserted_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["inserted_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 else:
                     raise ValueError("Unkown state found in wires...")
 
-                self.terminal_points[file_name]["terminalpoints"].append(file[terminal_key]["coordinates"])
-                label_dict["terminals"]["terminalpoints"].append(file[terminal_key]["coordinates"])
+                self.terminal_points[file_name]["terminalpoints"].append(file[terminal_key]["position"])
+                label_dict["terminals"]["terminalpoints"].append(file[terminal_key]["position"])
                 
             # State based Mean Vectors xyz coordinates 
             self.label_wire_meanvectors["on_table"] = torch.mean(torch.stack(label_dict["wires"]["table_wirepoints"])).cpu().numpy().tolist()
@@ -134,11 +134,11 @@ class SimHist:
                 
             return self.wire_points[file_name]["end_wirepoints"], self.terminal_points[file_name]["end_terminalpoints"]
 
-def vision_labels_eda(table_pts, held_pts, inserted_pts, terminal_pts, save_filename, save_ending, show_plot=False): 
+def vision_labels_eda(table_pts, held_pts, inserted_pts, terminal_pts, save_filename, save_ending, show_plot=True): 
     """ Plots for vision and label files"""     
     fig = plt.figure(figsize=(20,20))
     ax = fig.add_subplot(projection='3d')
-    
+    ax.set_zlim(0.0, 0.08)
     for p in range(len(table_pts)):
         ax.scatter(table_pts[p][0], table_pts[p][1], table_pts[p][2], c="red")       
     for p in range(len(held_pts)):
@@ -154,7 +154,11 @@ def vision_labels_eda(table_pts, held_pts, inserted_pts, terminal_pts, save_file
     plt.title(f"{save_filename} XYZ Data Points")
     plt.savefig(f"eda/figs/{save_filename}_eda_{save_ending}.png")
     print(f"Plot saved at : eda/figs/{save_filename}_eda_{save_ending}.png")
-    
+    # Set view to look down the Y-axis, so XY becomes X-horizontal, Z-vertical in 2D
+    ax.view_init(elev=0, azim=90, roll=0)
+
+    plt.savefig(f"eda/figs/{save_filename}_eda_{save_ending}_viewZ.png")
+    print(f"Plot saved at : eda/figs/{save_filename}_eda_{save_ending}_viewZ.png")
     if show_plot:
         plt.show()
         
@@ -182,13 +186,13 @@ def main(plot=True):
     now = datetime.now()
     month, day, hour, minute = now.month, now.day, now.hour, now.minute
     
-    save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist"
+    save_title_ending = f"{month}_{day}_{hour}{minute}_isaacsim_data_clean"
     hist = SimHist()
     # file_names = ["vision", "labels"]
     file_names = ["vision"]
     # file_names = ["vision"]
     # pth = "../dataset_lenovo/19.06_2_cleantest/"
-    pth = "../dataset/generated_synthetic_dataset/"
+    pth = "../dataset/0701_clean/"
     
     
     # Process Vision and labels files
@@ -204,7 +208,7 @@ def main(plot=True):
         print(len(table_wires), len(held_wires), len(inserted_wires), len(terminals))
         
         if plot:
-            vision_labels_eda(table_wires, held_wires, inserted_wires, terminals, save_filename=filename, save_ending=save_title_ending, show_plot=True)        
+            vision_labels_eda(table_wires, held_wires, inserted_wires, terminals, save_filename=filename, save_ending=save_title_ending, show_plot=False)        
     print(f"Total Simulations: {len(hist.simulation_length)}")
     
     # # Process end_sim_state file

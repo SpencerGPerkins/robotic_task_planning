@@ -8,6 +8,7 @@ Papers/**
 **/__pycache__/**
 **/eda/**
 **.pth
-**.png
+**/*.png
+**/*.csv
 
  

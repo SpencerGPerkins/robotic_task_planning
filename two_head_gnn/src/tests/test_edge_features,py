@@ -1,0 +1,18 @@
+import torch
+from features.edge_features import build_edge_index_adj_matrix, edge_feature_encoding
+
+def test_compute_edge_features():
+    wire_dict = [{"normalized_coords": [0.0, 0.0, 0.0]}]
+    terminal_dict = {"normalized_coords": [1.0, 1.0, 1.0]}
+
+    def dummy_dist(a, b):
+        return torch.norm(torch.tensor(a) - torch.tensor(b)).item()
+
+    edge_attr, dists = edge_feature_encoding(wire_dict, terminal_dict, dummy_dist)
+    assert edge_attr.shape == (2, 1)
+    assert len(dists) == 1
+
+def test_build_edge_index():
+    edge_index, _ = build_edge_index_adj_matrix(2, 1)
+    assert edge_index.shape[0] == 2
+    assert edge_index.shape[1] == 4  # 2 wires × 1 terminal × 2 directions

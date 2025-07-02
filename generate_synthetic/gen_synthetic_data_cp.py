@@ -113,7 +113,7 @@ class SyntheticData:
             num_samp = n + start_samp_num
             vision_dict = {
                 "wires": [],
-                "terminals": {}
+                "terminals": {},
                 "sample_label": "lock"
             }
 

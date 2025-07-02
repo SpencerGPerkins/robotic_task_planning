@@ -170,14 +170,14 @@ def end_state_eda(wire, term, save_ending, show_plot=False):
     if show_plot:
         plt.show()    
             
-def main(plot=True):
+def main(plot: bool, process_end_state_file: bool):
     now = datetime.now()
     month, day, hour, minute = now.month, now.day, now.hour, now.minute
     
     save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist"
     hist = SimHist()
-    # file_names = ["vision", "labels"]
-    file_names = ["vision"]
+    file_names = ["vision", "labels"]
+    # file_names = ["vision"]
     pth = "../dataset/generated_synthetic_dataset/"
     
     
@@ -191,38 +191,39 @@ def main(plot=True):
         held_wires = wire_pts["held_wirepoints"]
         inserted_wires = wire_pts["inserted_wirepoints"]
         terminals = terminal_pts["terminalpoints"]
-        print(len(table_wires), len(held_wires), len(inserted_wires), len(terminals))
+        print(f"Number of Table wires: {len(table_wires)}, Number of Held wires: {len(held_wires)}, Number of inserted_wires: {len(inserted_wires)}, Number of terminals: {len(terminals)}")
         
         if plot:
-            vision_labels_eda(table_wires, held_wires, inserted_wires, terminals, save_filename=filename, save_ending=save_title_ending, show_plot=True)        
+            vision_labels_eda(table_wires, held_wires, inserted_wires, terminals, save_filename=filename, save_ending=save_title_ending, show_plot=False)        
     print(f"Total Simulations: {len(hist.simulation_length)}")
     
-    # # Process end_sim_state file
-    # cycle_directory = pth + "end_sim_state/"
-    # num_files_cycle = len([f for f in os.listdir(cycle_directory) if os.path.isfile(os.path.join(cycle_directory, f))])
-    # end_wirepts, end_termpts = hist.process_file(pth,"end_sim_state", num_files=num_files_cycle)
-    # if plot:
-    #     end_state_eda(end_wirepts, end_termpts, save_ending=save_title_ending, show_plot=True)
-    
-    # # Dict for writing Label data
-    # labels_eda_dict = {
-    #     "action_totals":hist.label_action_counts,
-    #     "xyz_means":hist.label_wire_meanvectors,
-    #     "wire_cov_matrices": hist.label_wire_covmat
-    # }
-    
-    # Save action totals, xyz mean vectors for wires, xyz covariance matrices for wires 
-    # (hist.label_action_counts, hist.label_wire_meanvectors, hist.label_wire_covmat)
-    # with open(f"eda/meta/labels_eda_{save_title_ending}.json", "w") as write_file:
-    #     json.dump(labels_eda_dict, write_file)
-    # # Save wire points (hist.wire_points)
-    # with open(f"eda/meta/wirepoints_{save_title_ending}.json", "w") as write_wires:
-    #     json.dump(hist.wire_points, write_wires)
-    # # Save terminal points (hist.terminal_points)
-    # with open(f"eda/meta/terminalpoints_{save_title_ending}.json", "w") as write_terminals:
-    #     json.dump(hist.terminal_points, write_terminals)
+    if process_end_state_file:
+        # Process end_sim_state file
+        cycle_directory = pth + "end_sim_state/"
+        num_files_cycle = len([f for f in os.listdir(cycle_directory) if os.path.isfile(os.path.join(cycle_directory, f))])
+        end_wirepts, end_termpts = hist.process_file(pth,"end_sim_state", num_files=num_files_cycle)
+        if plot:
+            end_state_eda(end_wirepts, end_termpts, save_ending=save_title_ending, show_plot=True)
+        
+        # Dict for writing Label data
+        labels_eda_dict = {
+            "action_totals":hist.label_action_counts,
+            "xyz_means":hist.label_wire_meanvectors,
+            "wire_cov_matrices": hist.label_wire_covmat
+        }
+        
+        # Save action totals, xyz mean vectors for wires, xyz covariance matrices for wires 
+        (hist.label_action_counts, hist.label_wire_meanvectors, hist.label_wire_covmat)
+        with open(f"eda/meta/labels_eda_{save_title_ending}.json", "w") as write_file:
+            json.dump(labels_eda_dict, write_file)
+        # Save wire points (hist.wire_points)
+        with open(f"eda/meta/wirepoints_{save_title_ending}.json", "w") as write_wires:
+            json.dump(hist.wire_points, write_wires)
+        # Save terminal points (hist.terminal_points)
+        with open(f"eda/meta/terminalpoints_{save_title_ending}.json", "w") as write_terminals:
+            json.dump(hist.terminal_points, write_terminals)
     
     print("DATA Processed, Files Saved.")
         
 if __name__ == "__main__":
-    main()
+    main(plot=True, process_end_state_file=False)
