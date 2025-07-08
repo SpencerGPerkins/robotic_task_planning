@@ -5,12 +5,14 @@ from datetime import datetime
 import os
 from tqdm import tqdm
 import pandas as pd
+import json
 
 import config
 from data_process import load_dataset
 from models import TwoHeadGAT, TwoHeadGATSmall
 from utils import load_checkpoint
 from train_val import train, validate
+from plot_metrics import generate_all_plots
 
 month = datetime.now().month
 day = datetime.now().day
@@ -39,6 +41,13 @@ def main():
         "action_val_loss": []  
     }
 
+    confusion_matrix_data = {
+        "predicted_wires": [],
+        "wire_labels": [],
+        "predicted_actions": [],
+        "action_labels": []
+    }
+
     vision_data = config.VISION_DATA_PATH
     llm_data = config.LLM_DATA_PATH
     label_data = config.LABEL_DATA_PATH
@@ -58,6 +67,7 @@ def main():
     val_loader = DataLoader(val_data, batch_size=1, shuffle=False)
 
     device = config.DEVICE
+    print(device)
     if config.MODEL_SIZE == "small":
         model = TwoHeadGATSmall(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
         print("\n\nSmall Model Used...\n\n")
@@ -72,15 +82,22 @@ def main():
         print(f"\n\nCheckpoint not found at {config.CHECKPOINT_PATH}. Training from Scratch.\n\n")        
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)  # decay every 10 epochs
     criterion = torch.nn.CrossEntropyLoss()
 
     # Epoch loop
     for epoch in tqdm(range(config.NUM_EPOCHS), desc="Training Epochs"):
         train_loss, wire_acc, wire_f1, wire_loss, action_acc, action_f1, action_loss = train(model, train_loader, optimizer, criterion, device=device)
-        val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss = validate(model, val_loader, criterion, device=device)
+        val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss, cf_data = validate(model, val_loader, criterion, device=device)
         
-        print(f"\nEpoch {epoch+1}:\nTraining loss {train_loss:.4f},\nWire Acc {wire_acc:.4f}, Wire F1 {wire_f1:.4f}, Wire Loss {wire_loss:.4f},\nAction Acc {action_acc:.4f}, Action F1 {action_f1:.4f}, Action Loss {action_loss:.4f}")
-        print(f"--------------- \nValidation Loss {val_loss:.4f},\nWire Val Acc {wire_val_acc:.4f}, Wire Val F1 {wire_val_f1:.4f}, Wire Val Loss {wire_val_loss:.4f},\nAction Val Acc {action_val_acc:.4f}, Action Val F1 {action_val_f1:.4f}, Action Val Loss {action_val_loss:.4f}")
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"\nEpoch {epoch+1}, LR={current_lr:.5f}:\n"
+              f"Training loss {train_loss:.4f},\nWire Acc {wire_acc:.4f}, Wire F1 {wire_f1:.4f}, Wire Loss {wire_loss:.4f},\n"
+              f"Action Acc {action_acc:.4f}, Action F1 {action_f1:.4f}, Action Loss {action_loss:.4f}")
+        print(f"--------------- \nValidation Loss {val_loss:.4f},\nWire Val Acc {wire_val_acc:.4f}, Wire Val F1 {wire_val_f1:.4f}, "
+              f"Wire Val Loss {wire_val_loss:.4f},\nAction Val Acc {action_val_acc:.4f}, Action Val F1 {action_val_f1:.4f}, "
+              f"Action Val Loss {action_val_loss:.4f}\n")
+        
         training_results["epoch"].append(epoch)
         training_results["train_loss"].append(train_loss)
         training_results["wire_train_acc"].append(wire_acc)
@@ -97,6 +114,14 @@ def main():
         training_results["action_val_f1"].append(action_val_f1)
         training_results["action_val_loss"].append(action_val_loss) 
         
+        confusion_matrix_data["predicted_wires"] += cf_data["predicted_wires"]
+        confusion_matrix_data["wire_labels"] += cf_data["wire_labels"]
+        confusion_matrix_data["predicted_actions"] += cf_data["predicted_actions"]
+        confusion_matrix_data["action_labels"] += cf_data["action_labels"]
+
+        # Update learning rate
+        scheduler.step()
+
     # Save the model
     torch.save(model.state_dict(), config.SAVE_MODEL_WEIGHTS)   
     print("Model weights saved.")
@@ -105,7 +130,10 @@ def main():
     os.makedirs(results_path, exist_ok=True)
     results_df.to_csv(f"{results_path}_{hour}{minute}_{config.DATASET}.csv")
     print(f"Training/Validation Completed on {config.DATASET} Dataset")
-    
+    generate_all_plots(training_results, results_path)
+    with open(f"{results_path}_CF_data_{hour}{minute}_{config.DATASET}.json", "w") as write_cf:
+        json.dump(confusion_matrix_data, write_cf)
+
 if __name__ == "__main__":
     main()        
 

@@ -9,9 +9,10 @@ def euclidean_distance(pos1, pos2):
     return  np.linalg.norm(pos1- pos2)
 
 class SyntheticData:
-    def __init__(self, on_table_dist, held_dist, terminal_coords):
+    def __init__(self, on_table_dist, held_dist, inserted_dist, terminal_coords):
         self.on_table_dist = on_table_dist
         self.held_dist = held_dist
+        self.inserted_dist = inserted_dist
         self.wire_colors = ["blue", "black", "yellow", "white", "orange", "green", "red"]
         self.terminals = [
             "terminal_0", "terminal_1", 
@@ -35,7 +36,7 @@ class SyntheticData:
         -------
         Saves dictionaries as json_files
         """
-        parent_directory = "../dataset/generated_synthetic_dataset/"
+        parent_directory = "../dataset/generated_eval/"
         for n in range(num_samples):
             sample_number = n + start_samp_num 
 
@@ -71,7 +72,7 @@ class SyntheticData:
                     "name": target_wire["name"],
                     "color": target_wire["name"].split("_")[0],
                     "state": "held",
-                    "coordinates": target_wire["coordinates"]
+                    "position": target_wire["position"]
                 }
 
             elif w == target_wire["ID"] and action_type == "lock":
@@ -80,7 +81,7 @@ class SyntheticData:
                     "name": target_wire["name"],
                     "color": target_wire["name"].split("_")[0],
                     "state": "inserted",
-                    "coordinates": target_wire["coordinates"]
+                    "position": target_wire["position"]
                 }               
             else:
                 color = random.choice(self.wire_colors)
@@ -90,7 +91,7 @@ class SyntheticData:
                     "name": f"{color}_wire",
                     "color": color,
                     "state": "on_table",
-                    "coordinates": coords.flatten().tolist()
+                    "position": coords.flatten().tolist()
                 }  
 
 
@@ -98,9 +99,9 @@ class SyntheticData:
 
         for t, term_key in enumerate(self.terminals):
             if term_key == target_terminal["name"] and action_type == "lock":
-                terminals[term_key] = {"state": "inserted", "coordinates": target_terminal["coordinates"]}
+                terminals[term_key] = {"state": "inserted", "position": target_terminal["position"]}
             else:
-                terminals[term_key] = {"state": "empty", "coordinates": self.terminal_coords[t]}  
+                terminals[term_key] = {"state": "empty", "position": self.terminal_coords[t]}  
 
         return wires, terminals  
         
@@ -130,11 +131,11 @@ class SyntheticData:
             labels_dict["target_wire"] = {
                 "ID": target_wire_idx,
                 "name": f"{target_wire_color}_wire",
-                "coordinates": self.held_dist.sample(n=1).flatten().tolist()
+                "position": self.held_dist.sample(n=1).flatten().tolist()
             }
             labels_dict["target_terminal"] = {
                 "name": target_terminal,
-                "coordinates": self.terminal_coords[self.terminals.index(target_terminal)]
+                "position": self.terminal_coords[self.terminals.index(target_terminal)]
             }
             vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals(
                 labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires
@@ -144,13 +145,13 @@ class SyntheticData:
         elif sample_action == "lock":
             labels_dict["target_terminal"] = {
                 "name": target_terminal,
-                "coordinates": self.terminal_coords[self.terminals.index(target_terminal)]
+                "position": self.terminal_coords[self.terminals.index(target_terminal)]
             }
-            inserted_wire_coords = labels_dict["target_terminal"]["coordinates"]
+            # inserted_wire_coords = labels_dict["target_terminal"]["position"]
             labels_dict["target_wire"] = {
                 "ID": target_wire_idx,
                 "name": f"{target_wire_color}_wire",
-                "coordinates": [inserted_wire_coords[0]+0.005, inserted_wire_coords[1], inserted_wire_coords[2]]
+                "position": self.inserted_dist.sample(n=1).flatten().tolist()# Terminal based method: [inserted_wire_coords[0]+0.005, inserted_wire_coords[1], inserted_wire_coords[2]]
             }
             vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals(
                 labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires
@@ -160,12 +161,12 @@ class SyntheticData:
         else:
             labels_dict["target_terminal"] = {
                 "name": target_terminal,
-                "coordinates": self.terminal_coords[self.terminals.index(target_terminal)]
+                "position": self.terminal_coords[self.terminals.index(target_terminal)]
             }
             labels_dict["target_wire"] = {
                 "ID": -1, # Arbitrary, we don't know until distance calculation
                 "name": f"{target_wire_color}_wire",
-                "coordinates": []
+                "position": []
             }   
             vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals(
                 labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires
@@ -175,17 +176,17 @@ class SyntheticData:
             potential_target_wire = {"wire_id": -1, "distance_to_term": 1000, "wire_coords": []}
             for w, wire in enumerate(vision_dict["wires"]):
                 # if wire["color"] == target_wire_color:
-                distance = euclidean_distance(np.array(wire["coordinates"]), np.array(labels_dict["target_terminal"]["coordinates"]))
+                distance = euclidean_distance(np.array(wire["position"]), np.array(labels_dict["target_terminal"]["position"]))
                 if distance < potential_target_wire["distance_to_term"]:
                     potential_target_wire["wire_id"] = wire["id"]
                     potential_target_wire["distance_to_term"] = distance
-                    potential_target_wire["wire_coords"] = wire["coordinates"]
+                    potential_target_wire["wire_coords"] = wire["position"]
                 else:
                     continue
             vision_dict["wires"][potential_target_wire["wire_id"]]["color"] = target_wire_color
             vision_dict["wires"][potential_target_wire["wire_id"]]["name"] = f"{target_wire_color}_wire"
             labels_dict["target_wire"]["ID"] = potential_target_wire["wire_id"]
-            labels_dict["target_wire"]["coordinates"] = potential_target_wire["wire_coords"]
+            labels_dict["target_wire"]["position"] = potential_target_wire["wire_coords"]
             vision_dict["sample_label"] = "pick"
 
         return vision_dict, llm_dict, labels_dict

@@ -5,7 +5,7 @@ import seaborn as sns
 import config
 
 # Load the results JSON
-with open(f'{config.SAVE_EVAL_RESULTS_HEAD}_2025_7_2/predictions_labels_1448.json', 'r') as f:
+with open('../docs/TwoHead_Evaluation_results/TwoHeadGAT_small_2025_7_4/predictions_labels_1452.json', 'r') as f:
     results = json.load(f)
 
 # Extract predictions and ground truths

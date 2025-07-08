@@ -1,6 +1,7 @@
 import torch
 from sklearn.metrics import f1_score, accuracy_score
 
+
 def train(model, loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
@@ -29,10 +30,10 @@ def train(model, loader, optimizer, criterion, device):
             action_label = action_label.argmax(dim=1)
         else: # Shape [4]
             action_label = action_label.unsqueeze(0).argmax(dim=1)
-
+        
         # Loss weights 
         wire_weight = 1.0
-        action_weight = 2.0
+        action_weight = 1.0
 
         # Compute Loss
         wire_loss = criterion(wire_logits, wire_label_local)
@@ -101,7 +102,7 @@ def validate(model, loader, criterion, device):
 
             # Loss weights
             wire_weight = 1.0
-            action_weight = 2.0
+            action_weight = 1.0
 
             wire_loss = criterion(wire_logits, wire_label_local)
             epoch_val_wire_loss += wire_loss.item()
@@ -132,7 +133,14 @@ def validate(model, loader, criterion, device):
     averaged_val_wire_loss = epoch_val_wire_loss / len(loader)
     averaged_val_action_loss = epoch_val_action_loss / len(loader)
 
-    return averaged_val_loss, wire_val_acc, wire_val_f1, averaged_val_wire_loss, action_val_acc, action_val_f1, averaged_val_action_loss
+    cf_data = {
+        "predicted_wires": all_wire_preds,
+        "wire_labels": all_wire_labels,
+        "predicted_actions": all_action_preds,
+        "action_labels": all_action_labels
+    }
+
+    return averaged_val_loss, wire_val_acc, wire_val_f1, averaged_val_wire_loss, action_val_acc, action_val_f1, averaged_val_action_loss, cf_data
 
 
 

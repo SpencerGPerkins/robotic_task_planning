@@ -35,8 +35,8 @@ def validate_inserted_wire(sample):
         errors.append(f"Expected 1 inserted terminal, found {len(inserted_terms)}")
 
     if inserted_wires and inserted_terms:
-        wire_coords = inserted_wires[0]["coordinates"]
-        term_coords = inserted_terms[0]["coordinates"]
+        wire_coords = inserted_wires[0]["position"]
+        term_coords = inserted_terms[0]["position"]
 
         if not is_close(wire_coords, term_coords, tol=0.05):  # <- updated tolerance
             errors.append(
@@ -72,5 +72,5 @@ def validate_samples(directory):
     print("Finished check.")
 
 if __name__ == "__main__":
-    validate_samples("../dataset/generated_synthetic_dataset/vision")
+    validate_samples("../dataset/generated_synthetic_dataset_0703/vision")
 

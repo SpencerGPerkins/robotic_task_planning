@@ -47,6 +47,8 @@ class TaskGraphHeterogeneous:
 
         # Normalize object coordinates for positional encoding
         all_wire_coords = [wire["coordinates"] for wire in self.wire_nodes]
+        print(all_wire_coords)
+        print(self.terminal_node["coordinates"])
         all_coords = np.array(all_wire_coords + [self.terminal_node["coordinates"]])
         norm_coords = normalize(all_coords)
         norm_wire_coords = norm_coords[:len(all_wire_coords)]

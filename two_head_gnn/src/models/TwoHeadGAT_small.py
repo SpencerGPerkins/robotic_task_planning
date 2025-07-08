@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 import torch.nn.functional as F 
 from torch_geometric.nn import GATConv, NNConv, global_mean_pool        
 
@@ -33,14 +34,16 @@ class TwoHeadGATSmall(nn.Module):
         # Node Embeddings
         x1 = self.gat_conv1(x, edge_index)
         x1 = F.relu(x1)
+
         x2 = self.gat_conv2(x1, edge_index)
         x2 = F.relu(x2)
-        
+
         # Predictions
         p_wire = self.wire_head(x2[wire_mask]).squeeze(-1)
         
         # Graph level aggregation
         x_pooled = global_mean_pool(x2, batch)
+
         p_action = self.action_head(x_pooled)
         
         return p_wire, p_action

@@ -60,16 +60,16 @@ class SimHist:
 
                 for wire in file[wire_key]: # Get all wire coords
                     if wire["state"] == "on_table":
-                        self.wire_points[file_name]["table_wirepoints"].append(wire["coordinates"])
+                        self.wire_points[file_name]["table_wirepoints"].append(wire["position"])
                     elif wire["state"] == "held":
-                       self. wire_points[file_name]["held_wirepoints"].append(wire["coordinates"])
+                       self. wire_points[file_name]["held_wirepoints"].append(wire["position"])
                     elif wire["state"] == "inserted":
-                        self.wire_points[file_name]["inserted_wirepoints"].append(wire["coordinates"])
+                        self.wire_points[file_name]["inserted_wirepoints"].append(wire["position"])
                     else:
                         raise ValueError("Unkown state found in wires...")
                 term_keys = list(file[terminal_key].keys())
                 for key in term_keys:
-                    self.terminal_points[file_name]["terminalpoints"].append(file["terminals"][key]["coordinates"])
+                    self.terminal_points[file_name]["terminalpoints"].append(file["terminals"][key]["position"])
                     
             return self.wire_points[file_name], self.terminal_points[file_name]
         
@@ -87,21 +87,21 @@ class SimHist:
                     file = json.load(v_in)
                 if file["correct_action"] == "pick":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["table_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["table_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["table_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["table_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 elif file["correct_action"] == "insert" or file["correct_action"] == "putdown":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["held_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["held_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["held_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["held_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 elif file["correct_action"] == "lock":
                     self.label_action_counts[file["correct_action"]] += 1
-                    self.wire_points[file_name]["inserted_wirepoints"].append(file[wire_key]["coordinates"])
-                    label_dict["wires"]["inserted_wirepoints"].append(torch.tensor(file[wire_key]["coordinates"]))
+                    self.wire_points[file_name]["inserted_wirepoints"].append(file[wire_key]["position"])
+                    label_dict["wires"]["inserted_wirepoints"].append(torch.tensor(file[wire_key]["position"]))
                 else:
                     raise ValueError("Unkown state found in wires...")
 
-                self.terminal_points[file_name]["terminalpoints"].append(file[terminal_key]["coordinates"])
-                label_dict["terminals"]["terminalpoints"].append(file[terminal_key]["coordinates"])
+                self.terminal_points[file_name]["terminalpoints"].append(file[terminal_key]["position"])
+                label_dict["terminals"]["terminalpoints"].append(file[terminal_key]["position"])
                 
             # State based Mean Vectors xyz coordinates 
             self.label_wire_meanvectors["on_table"] = torch.mean(torch.stack(label_dict["wires"]["table_wirepoints"])).cpu().numpy().tolist()
@@ -174,11 +174,11 @@ def main(plot: bool, process_end_state_file: bool):
     now = datetime.now()
     month, day, hour, minute = now.month, now.day, now.hour, now.minute
     
-    save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist"
+    save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist_0703"
     hist = SimHist()
     file_names = ["vision", "labels"]
     # file_names = ["vision"]
-    pth = "../dataset/generated_synthetic_dataset/"
+    pth = "../dataset/generated_synthetic_dataset_0703/"
     
     
     # Process Vision and labels files
