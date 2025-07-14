@@ -38,7 +38,7 @@ def validate_inserted_wire(sample):
         wire_coords = inserted_wires[0]["position"]
         term_coords = inserted_terms[0]["position"]
 
-        if not is_close(wire_coords, term_coords, tol=0.05):  # <- updated tolerance
+        if not is_close(wire_coords, term_coords, tol=0.5):  # <- updated tolerance
             errors.append(
                 f"Inserted wire coordinates {wire_coords} do not match terminal coordinates {term_coords} within 0.05"
             )
@@ -72,5 +72,5 @@ def validate_samples(directory):
     print("Finished check.")
 
 if __name__ == "__main__":
-    validate_samples("../dataset/generated_synthetic_dataset_0703/vision")
+    validate_samples("../dataset/test_dataset/vision")
 

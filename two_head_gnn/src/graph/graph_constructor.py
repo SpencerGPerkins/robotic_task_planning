@@ -8,12 +8,13 @@ from data_process.preprocess import (
     extract_terminal_node,
     match_label_to_wire
 )
-from features.node_features import build_node_features
+from features.node_features import build_node_features, StateBased_build_node_features
 from features.edge_features import build_edge_index_adj_matrix, edge_feature_encoding
 from features.pos_encoding import SpatialPositionalEncoding
 from utils.coords import match_coords, normalize
 from utils.one_hot import one_hot_encode
 
+import config
 
 class TaskGraphHeterogeneous:
     def __init__(self, action_primitives, vision_path, llm_path, label_path=None):
@@ -63,10 +64,16 @@ class TaskGraphHeterogeneous:
         self.label_info = match_label_to_wire(label_data, self.wire_nodes, match_coords, self.colors)
         self.label_info["action_one_hot"] = one_hot_encode(self.label_info["action"], self.actions)
 
-        # ----Graph Features----
-        self.X_wires, self.X_terminal, self.label_info["local_wire_id"] = build_node_features(
-            self.wire_nodes, self.terminal_node, self.positional_encoder, self.target_info, self.label_info
-        )
+        if config.NODE_FEATURE_TYPE == "positional":
+            # ----Graph Features----
+            self.X_wires, self.X_terminal, self.label_info["local_wire_id"] = build_node_features(
+                self.wire_nodes, self.terminal_node, self.positional_encoder, self.label_info
+            )
+        elif config.NODE_FEATURE_TYPE == "state":
+            # ----Graph Features----
+            self.X_wires, self.X_terminal, self.label_info["local_wire_id"] = StateBased_build_node_features(
+                self.wire_nodes, self.terminal_node, self.label_info
+            )
 
         self.edge_index, self.adj_matrix = build_edge_index_adj_matrix(len(self.wire_nodes), 1) # 1 for 1 terminal
         self.edge_attr, _ = edge_feature_encoding(self.wire_nodes, self.terminal_node, self.euclidean_distance)

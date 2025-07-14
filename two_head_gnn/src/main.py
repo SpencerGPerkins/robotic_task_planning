@@ -126,9 +126,9 @@ def main():
     torch.save(model.state_dict(), config.SAVE_MODEL_WEIGHTS)   
     print("Model weights saved.")
     results_df = pd.DataFrame.from_dict(training_results)
-    results_path = f"{config.SAVE_RESULTS_HEAD}_{year}_{month}_{day}/"
+    results_path = f"{config.SAVE_RESULTS_HEAD}{year}_{month}_{day}/"
     os.makedirs(results_path, exist_ok=True)
-    results_df.to_csv(f"{results_path}_{hour}{minute}_{config.DATASET}.csv")
+    results_df.to_csv(f"{results_path}{hour}{minute}_{config.DATASET}.csv")
     print(f"Training/Validation Completed on {config.DATASET} Dataset")
     generate_all_plots(training_results, results_path)
     with open(f"{results_path}_CF_data_{hour}{minute}_{config.DATASET}.json", "w") as write_cf:

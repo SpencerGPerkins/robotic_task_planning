@@ -62,9 +62,9 @@ def main():
     # Initialize SyntheticData class with distributions
     sim_data = SyntheticData(trunc_table_dist, trunc_held_dist, trunc_inserted_dist, terminal_coords)
 
-    sim_data.generate_files(num_samples=50, start_samp_num=0, action_type="pick")
-    sim_data.generate_files(num_samples=50, start_samp_num=50, action_type="insert")
-    sim_data.generate_files(num_samples=50, start_samp_num=100, action_type="lock")
+    sim_data.generate_files(num_samples=500, start_samp_num=0, action_type="pick")
+    sim_data.generate_files(num_samples=500, start_samp_num=500, action_type="insert")
+    sim_data.generate_files(num_samples=500, start_samp_num=1000, action_type="lock")
 
 if __name__ == "__main__":
     main()

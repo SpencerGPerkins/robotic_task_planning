@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F 
-from torch_geometric.nn import GATConv, NNConv, global_mean_pool        
+from torch_geometric.nn import GATConv, NNConv, global_mean_pool, GlobalAttention      
 
 class TwoHeadGATSmall(nn.Module):
     def __init__(self, in_dim, edge_feat_dim, hidden_dim, num_actions, heads=4, dropout=0.3):
@@ -25,7 +25,14 @@ class TwoHeadGATSmall(nn.Module):
         self.action_head = nn.Sequential(
             nn.Linear(hidden_dim, num_actions)
         )
+
         
+        # self.attn_pool = GlobalAttention(
+        #     gate_nn=torch.nn.Sequential(
+        #         torch.nn.Linear(hidden_dim, 1),
+        #         torch.nn.Sigmoid()
+        #     )
+        # )
     def forward(self, x, wire_mask, edge_index, edge_attr, batch):
         # Edge Embeddings
         x = self.edge_embeddings(x, edge_index, edge_attr)
@@ -40,7 +47,11 @@ class TwoHeadGATSmall(nn.Module):
 
         # Predictions
         p_wire = self.wire_head(x2[wire_mask]).squeeze(-1)
-        
+
+
+        # # Graph-level action pooling
+        # x_pooled = self.attn_pool(x2, batch)
+        # p_action = self.action_head(x_pooled)
         # Graph level aggregation
         x_pooled = global_mean_pool(x2, batch)
 

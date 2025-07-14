@@ -1,14 +1,15 @@
+from truncated_normal import TruncatedMVN
+import torch
 import json
 import numpy as np
 import random
-import os
 
 
 def euclidean_distance(pos1, pos2):
     return  np.linalg.norm(pos1- pos2)
 
 class SyntheticData:
-    def __init__(self, on_table_dist, held_dist, inserted_dist, terminal_coords, config):
+    def __init__(self, on_table_dist, held_dist, inserted_dist, terminal_coords):
         self.on_table_dist = on_table_dist
         self.held_dist = held_dist
         self.inserted_dist = inserted_dist
@@ -22,14 +23,6 @@ class SyntheticData:
             ]
 
         self.terminal_coords = terminal_coords
-        self.config = config
-
-        self._make_output_dirs()
-
-    def _make_output_dirs(self):
-        base = self.config["output_base_path"]
-        for sub in ["vision", "llm", "labels"]:
-            os.makedirs(os.path.join(base, sub), exist_ok=True)
 
     def generate_files(self, num_samples:int, start_samp_num:int, action_type:str):
         """Generate a sample based on action type
@@ -42,33 +35,20 @@ class SyntheticData:
         Returns:
         -------
         Saves dictionaries as json_files
-        """       
-
-        parent_directory = self.config["output_base_path"]        
+        """
+        parent_directory = "../dataset/generated_eval/"
         for n in range(num_samples):
             sample_number = n + start_samp_num 
 
             number_of_wires = random.randint(1,20)
             vision, llm, labels = self.get_dicts(number_of_wires, action_type)
-            
+
             # Save dicts to json files
             self.save_vision(vision, sample_number, parent_directory)
             self.save_llm(llm, sample_number, parent_directory)
             self.save_labels(labels, sample_number, parent_directory)
 
         print(f"All files saved!")
-
-    def generate_files_onepercolor(self, num_samples: int, start_samp_num:int, action_type:str):
-        parent_directory = self.config["output_base_path"]
-        for m in range(num_samples):
-            sample_number = m + start_samp_num
-
-            number_of_wires = len(self.wire_colors)
-            vision2, llm2, labels2 = self.get_dicts_onepercolor(number_of_wires, action_type)
-
-            self.save_vision(vision2, sample_number, parent_directory)
-            self.save_llm(llm2, sample_number, parent_directory)
-            self.save_labels(labels2, sample_number, parent_directory)
 
     def get_wires_terminals(self, target_wire, target_terminal, action_type, num_wires):
         """Generate the wires and terminals for a given vision sample
@@ -124,63 +104,9 @@ class SyntheticData:
                 terminals[term_key] = {"state": "empty", "position": self.terminal_coords[t]}  
 
         return wires, terminals  
-
-    def get_wires_terminals_onepercolor(self, target_wire, target_terminal, action_type, num_wires=7):
-        wires = []
-        terminals = {}
-        non_target_colors = [c for c in self.wire_colors if c != target_wire["name"].split("_")[0]]
-        color_counter = 0
-        for w in range(num_wires):
-            if w == target_wire["ID"] and action_type == "insert":
-                wire = {
-                "id": target_wire["ID"],
-                "name": target_wire["name"],
-                "color": target_wire["name"].split("_")[0],
-                "state": "held",
-                "position": target_wire["position"]
-            }
-                
-            elif w == target_wire["ID"] and action_type == "lock":
-                wire = {
-                    "id": target_wire["ID"],
-                    "name": target_wire["name"],
-                    "color": target_wire["name"].split("_")[0],
-                    "state": "inserted",
-                    "position": target_wire["position"]
-                } 
-            
-            elif w == target_wire["ID"] and action_type == "pick":
-                wire = {
-                    "id": target_wire["ID"],
-                    "name": target_wire["name"],
-                    "color": target_wire["name"].split("_")[0],
-                    "state": "on_table",
-                    "position": target_wire["position"]
-                }
-            
-            else:
-                coords = self.on_table_dist.sample(n=1)
-                color = non_target_colors[color_counter]
-                wire = {
-                    "id": w,
-                    "name": f"{color}_wire",
-                    "color": color,
-                    "state": "on_table",
-                    "position": coords.flatten().tolist()
-                }
-                color_counter += 1
-
-            wires.append(wire)
-            
-        for t, term_key in enumerate(self.terminals):
-            if term_key == target_terminal["name"] and action_type == "lock":
-                terminals[term_key] = {"state": "inserted", "position": target_terminal["position"]}
-            else:
-                terminals[term_key] = {"state": "empty", "position": self.terminal_coords[t]}  
-
-        print(f"CHECKING: {len(wires), len(terminals)}")
-        return wires, terminals  
-            
+    
+  
+        
     def get_dicts(self, num_wires, sample_action):
         """Create dictionaries for file types (vision, llm, labels)
         Params:
@@ -267,65 +193,7 @@ class SyntheticData:
 
         return vision_dict, llm_dict, labels_dict
 
-    def get_dicts_onepercolor(self, num_wires, sample_action):
-        target_terminal = random.choice(self.terminals)
-        target_wire_color = random.choice(self.wire_colors)
-        target_wire_idx = self.wire_colors.index(target_wire_color)
-
-        # Initialize vision and labels dictionaries
-        vision_dict = {"wires": [], "terminals": {}, "sample_label": None}
-        labels_dict = {"target_wire":{}, "target_terminal":{}, "correct_action": sample_action}
-        llm_dict = {"goal": sample_action, "target_wire": f"{target_wire_color}_wire" , "target_terminal": target_terminal}
-
-        # Insert sample
-        if sample_action == "insert":
-            labels_dict["target_wire"] = {
-                "ID": target_wire_idx,
-                "name": f"{target_wire_color}_wire",
-                "position": self.held_dist.sample(n=1).flatten().tolist()
-            }
-            labels_dict["target_terminal"] = {
-                "name": target_terminal,
-                "position": self.terminal_coords[self.terminals.index(target_terminal)]
-            }
-            vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals_onepercolor(
-                labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires=len(self.wire_colors)
-                )
-            vision_dict["sample_label"] = "insert"
-        # Lock sample
-        elif sample_action == "lock":
-            labels_dict["target_terminal"] = {
-                "name": target_terminal,
-                "position": self.terminal_coords[self.terminals.index(target_terminal)]
-            }
-            # inserted_wire_coords = labels_dict["target_terminal"]["position"]
-            labels_dict["target_wire"] = {
-                "ID": target_wire_idx,
-                "name": f"{target_wire_color}_wire",
-                "position": self.inserted_dist.sample(n=1).flatten().tolist()# Terminal based method: [inserted_wire_coords[0]+0.005, inserted_wire_coords[1], inserted_wire_coords[2]]
-            }
-            vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals_onepercolor(
-                labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires=len(self.wire_colors)
-                )
-            vision_dict["sample_label"] = "lock"
-        
-        else:
-            labels_dict["target_terminal"] = {
-                "name": target_terminal,
-                "position": self.terminal_coords[self.terminals.index(target_terminal)]
-            }
-            labels_dict["target_wire"] = {
-                "ID": target_wire_idx,
-                "name": f"{target_wire_color}_wire",
-                "position": self.on_table_dist.sample(n=1).flatten().tolist()
-            }
-            vision_dict["wires"], vision_dict["terminals"] = self.get_wires_terminals_onepercolor(
-                labels_dict["target_wire"], labels_dict["target_terminal"], sample_action, num_wires=len(self.wire_colors)
-            )
-            vision_dict["sample_label"] = "pick"
-            
-        return vision_dict, llm_dict, labels_dict  
-            
+  
     def save_vision(self, vision_dict, sample_number, parent_dir):
         with open(f"{parent_dir}vision/sample_{sample_number}.json", "w") as out_vision:
             json.dump(vision_dict, out_vision)

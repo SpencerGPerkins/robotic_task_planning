@@ -174,11 +174,11 @@ def main(plot: bool, process_end_state_file: bool):
     now = datetime.now()
     month, day, hour, minute = now.month, now.day, now.hour, now.minute
     
-    save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist_0703"
+    save_title_ending = f"{month}_{day}_{hour}{minute}_Generated_dataset_dist_0709"
     hist = SimHist()
     file_names = ["vision", "labels"]
     # file_names = ["vision"]
-    pth = "../dataset/generated_synthetic_dataset_0703/"
+    pth = "../dataset/generated_synthetic_dataset_0709/"
     
     
     # Process Vision and labels files

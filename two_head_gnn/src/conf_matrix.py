@@ -5,7 +5,7 @@ import seaborn as sns
 import config
 
 # Load the results JSON
-with open('../docs/TwoHead_Evaluation_results/TwoHeadGAT_small_2025_7_4/predictions_labels_1452.json', 'r') as f:
+with open('../docs/results_by_method/task_specific_graph/state_encoding_based/medium_model/evaluation_results/_2025_7_10/predictions_labels_1543.json', 'r') as f:
     results = json.load(f)
 
 # Extract predictions and ground truths

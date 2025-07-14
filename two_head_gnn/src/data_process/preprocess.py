@@ -28,6 +28,7 @@ def extract_wire_nodes(all_wires, target_info):
             dict_entry = {
                 "id": idx,
                 "color": wire["color"],
+                "state": wire["state"],
                 "coordinates": wire["position"]
             }
             wires.append(dict_entry)
@@ -50,10 +51,12 @@ def extract_terminal_node(all_terminals, target_info):
     """
     terminal_name = target_info["terminal_name"]
     coords = all_terminals[terminal_name]["position"]
+    state = all_terminals[terminal_name]["state"]
 
     return {
         "id": target_info["terminal_id"],
         "name": terminal_name,
+        "state": state,
         "coordinates": coords
     }
 
