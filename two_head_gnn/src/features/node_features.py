@@ -20,8 +20,10 @@ def build_node_features(wire_list, terminal_dict, pos_encoder, label_info):
     """
 
     X_wires = []
-    wire_coords = [np.array(wire["normalized_coordinates"]) for wire in wire_list]
-    coords_list = wire_coords + [terminal_dict["normalized_coordinates"]]
+    # wire_coords = [np.array(wire["normalized_coordinates"]) for wire in wire_list]
+    # coords_list = wire_coords + [terminal_dict["normalized_coordinates"]]
+    wire_coords = [np.array(wire["coordinates"]) for wire in wire_list]
+    coords_list = wire_coords + [terminal_dict["coordinates"]]
     coords = np.stack(coords_list) # Should be shape: (batchsize=1, N, 2)
     coords = coords[np.newaxis, :, :] # Maintain batch size axis for now in case batching 
     positions = pos_encoder(torch.tensor(coords))
@@ -66,10 +68,35 @@ def StateBased_build_node_features(wire_list, terminal_dict, label_info):
     X_wire = X_wires
 
     f_term = [0., 1.]
+
     term_state_encoding = one_hot_encode(terminal_dict["state"], possible_states)
+
     f_term.extend(term_state_encoding)
     X_terminals = f_term
 
     return X_wires, X_terminals, local_wire_id
-    
+
+def MultiTerm_StateBased_build_node_features(wire_list, terminal_list, label_info):
+    possible_states = ["on_table", "held", "inserted", "empty", "locked"]
+    X_wires = []
+    local_wire_id = None
+    for w, wire in enumerate(wire_list):
+        print(wire)
+        f = [1., 0.]
+        state_encoding = one_hot_encode(wire["state"], possible_states)
+        f.extend(state_encoding)
+
+        X_wires.append(f)
+        if wire["id"] == label_info["global_wire_id"]:
+            label_info["local_wire_id"] = len(X_wires)-1
+            local_wire_id = label_info["local_wire_id"]
+
+    X_terminals = []
+    for t, term in enumerate(terminal_list):
+        f_term = [0., 1.]
+        term_state_encoding = one_hot_encode(term["state"], possible_states)
+        f_term.extend(term_state_encoding)
+        X_terminals.append(f_term)  
+ 
+    return X_wires, X_terminals, local_wire_id   
        

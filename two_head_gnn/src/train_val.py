@@ -3,6 +3,7 @@ from sklearn.metrics import f1_score, accuracy_score
 
 
 def train(model, loader, optimizer, criterion, device):
+    
     model.train()
     total_loss = 0
     epoch_wire_loss = 0
@@ -30,6 +31,11 @@ def train(model, loader, optimizer, criterion, device):
             action_label = action_label.argmax(dim=1)
         else: # Shape [4]
             action_label = action_label.unsqueeze(0).argmax(dim=1)
+        # if epoch_cond:
+        #     if action_logits.argmax().item() != action_label.item():
+        #         print("in Train:")
+        #         print(data.graph_id)
+        
         
         # Loss weights 
         wire_weight = 1.0
@@ -99,6 +105,10 @@ def validate(model, loader, criterion, device):
                 action_label = action_label.argmax(dim=1)
             else: # shape [4]
                 action_label = action_label.unsqueeze(0).argmax(dim=1)
+            # if epoch_cond:
+            #     if action_logits.argmax().item() != action_label.item():
+            #         print("in Val:")
+            #         print(data.graph_id)
 
             # Loss weights
             wire_weight = 1.0

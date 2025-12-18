@@ -13,16 +13,18 @@ def build_edge_index_adj_matrix(num_wires, num_terminals=1):
     print(edge_index)
     for src, dst in edge_index.t():
         adj_matrix[src, dst] = 1 
-
+    # import pdb;pdb.set_trace()
     return edge_index, adj_matrix
 
-def edge_feature_encoding(wire_list, terminal_dict, distance_function):
+def edge_feature_encoding(wire_list, terminal_dict, distance_function, target_wire_color):
     edge_features = []
     distances = []
     num_wires, num_terminals = len(wire_list), len(terminal_dict)
 
     for i in range(num_wires):
-        dist = distance_function(torch.tensor(wire_list[i]["normalized_coordinates"]), torch.tensor(terminal_dict["normalized_coordinates"]))
+        # dist = distance_function(torch.tensor(wire_list[i]["normalized_coordinates"]), torch.tensor(terminal_dict["normalized_coordinates"]))
+
+        dist = distance_function(torch.tensor(wire_list[i]["coordinates"]), torch.tensor(terminal_dict["coordinates"]))
         distances.append(dist)
     
     min_dist = min(distances)
@@ -31,8 +33,62 @@ def edge_feature_encoding(wire_list, terminal_dict, distance_function):
 
     normed = [1- ((d - min_dist) / denom) for d in distances]
 
-    for val in normed:
-        edge_features.append([val]) # Wire to Terminal
-        edge_features.append([val]) # Terminal to Wire
+    # Distance and relevance weight
+    for v, val in enumerate(normed):
+        # edge_features.append([val]) # Wire to Terminal
+        if wire_list[v]["color"] == target_wire_color:
+            edge_features.append([val, 5.]) 
+            edge_features.append([val, 5.])
+        else:
+            edge_features.append([val, 0.])
+            edge_features.append([val, 0.])
+        # edge_features.append([val]) # Terminal to Wire
+    print("IN THE EDGE FEATURE FUNCTION\n")
+    print(f"normed: {normed}")
+    print(f"distances: {distances}")
     
     return torch.tensor(edge_features, dtype=torch.float), distances
+
+# def fullgraph_edge_feature_encoding(wire_list, terminal_list, distance_function, target_wire_color, target_terminal):
+#     edge_features = []
+#     distances = []
+#     num_wires, num_terminals = len(wire_list), len(terminal_list)
+
+#     for i in range(num_wires):
+#         for j in range(num_terminals):
+#         # dist = distance_function(torch.tensor(wire_list[i]["normalized_coordinates"]), torch.tensor(terminal_dict["normalized_coordinates"]))
+#             dist = distance_function(torch.tensor(wire_list[i]["coordinates"]), torch.tensor(terminal_list[j]["coordinates"]))
+#             distances.append(dist)
+    
+#     min_dist = min(distances)
+#     max_dist = max(distances)
+#     denom = max_dist - min_dist if max_dist > min_dist else 1e-6
+
+#     normed = [1- ((d - min_dist) / denom) for d in distances] 
+#     import pdb;pdb.set_trace()
+#     # Distance and relevance weight
+#     for v, val in enumerate(normed[:num_wires]):
+#         if v < num_wires:
+#             # edge_features.append([val]) # Wire to Terminal
+#             if wire_list[v]["color"] == target_wire_color:
+#                 edge_features.append([val, 5.]) 
+#                 edge_features.append([val, 5.])
+#             else:
+#                 edge_features.append([val, 0.])
+#                 edge_features.append([val, 0.])
+#         else:
+#             term_id = 
+    # for vt, term_val in enumerate(normed[num_wires+1:]):
+    #     import pdb; pdb.set_trace
+    #     if terminal_list[vt]["id"] == vt:
+    #         edge_features.append([val, 5.]) 
+    #         edge_features.append([val, 5.])
+    #     else:
+    #         edge_features.append([val, 0.])
+    #         edge_features.append([val, 0.])
+    #     # edge_features.append([val]) # Terminal to Wire
+    # print("IN THE EDGE FEATURE FUNCTION\n")
+    # print(f"normed: {normed}")
+    # print(f"distances: {distances}")
+    
+    # return torch.tensor(edge_features, dtype=torch.float), distances

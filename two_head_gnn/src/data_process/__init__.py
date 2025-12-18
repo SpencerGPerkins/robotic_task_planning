@@ -4,6 +4,7 @@ from .open_file import open_helper
 from .preprocess import (
     parse_target_info,
     extract_wire_nodes,
+    extract_wire_nodes_statebased,
     extract_terminal_node,
     match_label_to_wire
 )
@@ -13,6 +14,7 @@ __all__ = [
     "open_helper",
     "parse_target_info",
     "extract_wire_nodes",
+    "extract_wire_nodes_statebased",
     "extract_terminal_node",
     "match_label_to_wire",
     "load_dataset"

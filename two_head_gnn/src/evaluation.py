@@ -18,10 +18,11 @@ hour = datetime.now().hour
 minute = datetime.now().minute
 
 def eval(model, loader, criterion, device):
+    actions = ["pick", "insert", "lock", "putdown"]
     model.eval()
     total_loss = 0
-    wire_loss = 0
-    action_loss = 0
+    eval_wire_loss = 0
+    eval_action_loss = 0
 
     all_wire_preds, all_wire_labels = [], []
     all_action_preds, all_action_labels = [], []
@@ -42,23 +43,29 @@ def eval(model, loader, criterion, device):
                 action_label = action_label.argmax(dim=1)
             else: # shape [4]
                 action_label = action_label.unsqueeze(0).argmax(dim=1)
+            
+            if actions[action_label] == "insert":
+                print(data.graph_id)
 
             # Loss weights
             wire_weight = 1.0
             action_weight = 2.0
-
-            wire_loss = criterion(wire_logits, wire_label_local)
-            wire_loss += wire_loss.item()
+            # import pdb;pdb.set_trace()
+            wire_loss = criterion(wire_logits, wire_label_local)   # DEBUG: Previously I added wire_loss to wire_loss and action_loss to action_loss...
+            # wire_loss += wire_loss.item()
+            eval_wire_loss += wire_loss.item()
             action_loss = criterion(action_logits, action_label)
-            action_loss += action_loss.item()
+            # import pdb;pdb.set_trace()
+            # action_loss += action_loss.item()
+            eval_action_loss += action_loss.item()
+            # import pdb;pdb.set_trace()
 
             loss = (wire_weight * wire_loss) + (action_weight * action_loss)
             total_loss += loss.item()
-            if action_label.item() == 2:
-                print(f"Lock sample number {loss_iter_counter}")
-                print(f"Lock Action loss: {loss}")
-                loss_iter_counter +=1
-
+            print("\nPrediction:")
+            print(action_logits.argmax().item())
+            print("Label:")
+            print(action_label.item())
             # Predictions
             wire_pred_local = wire_logits.argmax().item()
             wire_label_local = wire_label_local.item()
@@ -115,10 +122,10 @@ def main():
     device = config.DEVICE
     
     if config.MODEL_SIZE == "small":
-        model = TwoHeadGATSmall(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
+        model = TwoHeadGATSmall(in_dim=len(dataset[0].x[0]), edge_feat_dim=2, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
         print("\n\nEvaluating Small Model...\n\n")
     elif config.MODEL_SIZE == "medium":
-        model = TwoHeadGAT(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
+        model = TwoHeadGAT(in_dim=len(dataset[0].x[0]), edge_feat_dim=2, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
         print("\n\nMedium Model Used...\n\n")
 
     if os.path.exists(config.CHECKPOINT_PATH):

@@ -5,7 +5,7 @@ import seaborn as sns
 import config
 
 # Load the results JSON
-with open('../docs/results_by_method/task_specific_graph/state_encoding_based/medium_model/evaluation_results/_2025_7_10/predictions_labels_1543.json', 'r') as f:
+with open(f'{config.SAVE_EVAL_RESULTS_HEAD}_2025_8_8/predictions_labels_177.json', 'r') as f:
     results = json.load(f)
 
 # Extract predictions and ground truths
@@ -15,13 +15,22 @@ action_pred = results['predicted_action']
 action_true = results['action_truth']
 
 # Function to print metrics and plot confusion matrix
-def evaluate_and_plot(true, pred, label):
+def evaluate_and_plot(true, pred, label, class_names=["pick", "insert", "lock", "putdown"]):
+
     print(f"\n=== {label.upper()} Evaluation ===")
     print(classification_report(true, pred, digits=3))
 
     cm = confusion_matrix(true, pred)
+
+    
+    labels = class_names if class_names else sorted(set(true))
     plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', square=True,
+    if label == "action":   
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', square=True,
+                    xticklabels=labels,
+                    yticklabels=labels)
+    else:
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', square=True,
                 xticklabels=sorted(set(true)),
                 yticklabels=sorted(set(true)))
     plt.xlabel('Predicted')

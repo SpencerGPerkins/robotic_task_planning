@@ -38,6 +38,44 @@ def extract_wire_nodes(all_wires, target_info):
     
     return wires
 
+def extract_wire_nodes_statebased(all_wires, target_info):
+    """Extract target wires, defined by target wire color, and check for other manipulated wires
+    Params:
+    -------
+        all_wires: list, each element is a dict corresponding to a detected wire
+        target_info: dict, target information extracted from LLM data
+
+    Returns:
+    -------
+        wires: list, detected wires that correspond to the target color from the LLM
+    """
+    wires = []
+    for idx, wire in enumerate(all_wires): # Iterate through detected wires for target wires based on color
+        if wire["color"] == target_info["wire_color"]:
+            dict_entry = {
+                "id": idx,
+                "color": wire["color"],
+                "state": wire["state"],
+                "coordinates": wire["position"]
+            }
+            wires.append(dict_entry)
+            print(f"Wire {idx} processed...")
+            
+        elif wire["state"] == "held":
+            dict_entry = {
+                "id": idx,
+                "color": wire["color"],
+                "state": wire["state"],
+                "coordinates": wire["position"]
+            }
+            wires.append(dict_entry)
+            print(f"Wire {idx} processed...")
+
+        else:
+            continue    
+
+    return wires
+
 def extract_terminal_node(all_terminals, target_info):
     """Extract the target terminal, defined by name from LLM
     Params:
@@ -59,6 +97,7 @@ def extract_terminal_node(all_terminals, target_info):
         "state": state,
         "coordinates": coords
     }
+
 
 def match_label_to_wire(label_data, wire_list, match_coords_fn, color_list):
     """Find the wire in wire_dict that matches the label coordinates

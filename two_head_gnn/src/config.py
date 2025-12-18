@@ -16,14 +16,14 @@ NODE_FEATURE_TYPE = "positional" # Supports "positional", "state"
 
 # Checkpoint
 CHECKPOINT_PATH = f"{path_config.MODEL_WEIGHTS[MODEL_SIZE]}_{NODE_FEATURE_TYPE}_{GRAPH_TYPE}.pth"
-
+# CHECKPOINT_PATH = "TwoHeadGAT_small_7172025_positional_task_specific.pth"
 # Device
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 #=====Training / validation config====================================#
 # Data paths
-DATASET = "generated_synthetic_dataset_0709"
+DATASET = "generated_synthetic_dataset_0807"
 DATASET_BASE = path_config.TRAINING_DATASETS[DATASET]["path"]
 VISION_DATA_PATH = f"{DATASET_BASE}/vision/"
 LLM_DATA_PATH = f"{DATASET_BASE}/llm/"
@@ -44,14 +44,17 @@ SAVE_RESULTS_HEAD = f"{path_config.RESULTS_DIRS[GRAPH_TYPE][NODE_FEATURE_TYPE]}{
 
 
 #======Testing config=================================================# 
-EVAL_DATASET = "0701_clean_eval"
+EVAL_DATASET = "generated_evaluation_dataset_0807"
+# EVAL_DATASET = "0701_clean_eval"
 EVAL_DATASET_BASE = path_config.EVAL_DATASETS[EVAL_DATASET]["path"]
+
 
 EVAL_VISION_DATA_PATH = f"{EVAL_DATASET_BASE}/vision/"
 EVAL_LLM_DATA_PATH = f"{EVAL_DATASET_BASE}/llm/"
 EVAL_LABEL_DATA_PATH = f"{EVAL_DATASET_BASE}/labels/"
 
 NUM_EVAL_SAMPLES = path_config.EVAL_DATASETS[EVAL_DATASET]["num_samples"]
+
 
 SAVE_EVAL_RESULTS_HEAD = f"{path_config.RESULTS_DIRS[GRAPH_TYPE][NODE_FEATURE_TYPE]}{MODEL_SIZE}_model/evaluation_results/"
 

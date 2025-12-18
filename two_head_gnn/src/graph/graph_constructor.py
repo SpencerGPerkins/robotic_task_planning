@@ -5,11 +5,12 @@ from data_process.open_file import open_helper
 from data_process.preprocess import (
     parse_target_info,
     extract_wire_nodes,
+    extract_wire_nodes_statebased,
     extract_terminal_node,
     match_label_to_wire
 )
-from features.node_features import build_node_features, StateBased_build_node_features
-from features.edge_features import build_edge_index_adj_matrix, edge_feature_encoding
+from features.node_features import build_node_features, StateBased_build_node_features, MultiTerm_StateBased_build_node_features
+from features.edge_features import build_edge_index_adj_matrix, edge_feature_encoding #, fullgraph_edge_feature_encoding
 from features.pos_encoding import SpatialPositionalEncoding
 from utils.coords import match_coords, normalize
 from utils.one_hot import one_hot_encode
@@ -43,21 +44,11 @@ class TaskGraphHeterogeneous:
             label_data = open_helper(label_path)
         
         self.target_info = parse_target_info(llm_data, self.colors)
-        self.wire_nodes = extract_wire_nodes(vision_data["wires"], self.target_info)
-        self.terminal_node = extract_terminal_node(vision_data["terminals"], self.target_info)
+        target_wire_color = self.target_info["wire_color"]
+        # self.wire_nodes = extract_wire_nodes(vision_data["wires"], self.target_info)
+        self.wire_nodes = extract_wire_nodes_statebased(vision_data["wires"], self.target_info)
 
-        # Normalize object coordinates for positional encoding
-        all_wire_coords = [wire["coordinates"] for wire in self.wire_nodes]
-        print(all_wire_coords)
-        print(self.terminal_node["coordinates"])
-        all_coords = np.array(all_wire_coords + [self.terminal_node["coordinates"]])
-        norm_coords = normalize(all_coords)
-        norm_wire_coords = norm_coords[:len(all_wire_coords)]
-        norm_terminal_coords = norm_coords[len(all_wire_coords)] # Should only be last index of norm_coords
-        # Assign normalized coordinates to wire and terminal node dicts
-        for i, norm_coord in enumerate(norm_wire_coords):
-            self.wire_nodes[i]["normalized_coordinates"] = norm_coord
-        self.terminal_node["normalized_coordinates"] = norm_terminal_coords
+        self.terminal_node = extract_terminal_node(vision_data["terminals"], self.target_info)
 
         # -------Label info: Match ID of wire from wire_nodes 
         # One-hot encode Action label
@@ -76,7 +67,7 @@ class TaskGraphHeterogeneous:
             )
 
         self.edge_index, self.adj_matrix = build_edge_index_adj_matrix(len(self.wire_nodes), 1) # 1 for 1 terminal
-        self.edge_attr, _ = edge_feature_encoding(self.wire_nodes, self.terminal_node, self.euclidean_distance)
+        self.edge_attr, _ = edge_feature_encoding(self.wire_nodes, self.terminal_node, self.euclidean_distance, target_wire_color)
 
         self.create_node_masks()
 
@@ -117,13 +108,10 @@ class TaskGraphHeterogeneous:
         )
 
     def get_positions(self):
-        wire_pos = [wire["normalized_coords"] for wire in self.wire_dict]
-        terminal_pos = self.terminal_dict["normalized_coords"]
+        # wire_pos = [wire["normalized_coordinates"] for wire in self.wire_nodes]
+        # terminal_pos = self.terminal_node["normalized_coordinates"]
+        wire_pos = [wire["coordinates"] for wire in self.wire_nodes]
+        terminal_pos = self.terminal_node["coordinates"]
         return torch.tensor(wire_pos), torch.tensor(terminal_pos)
         
-
-
-
-
-
-        
+  

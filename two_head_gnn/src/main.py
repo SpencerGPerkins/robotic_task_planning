@@ -58,7 +58,7 @@ def main():
     dataset = load_dataset(vision_data, llm_data, label_data, num_data_samples=num_samples, action_primitives=config.ACTION_PRIMS)
     train_size =int(0.8 * num_samples)
     val_size = num_samples - train_size
-    generator = torch.Generator().manual_seed(42)
+    generator = torch.Generator().manual_seed(42) # Previous is 42
     train_data, val_data = random_split(dataset, [train_size, val_size], generator=generator)
 
     print(f"Length of train data / val data: {len(train_data)} / {len(val_data)}")    
@@ -69,10 +69,10 @@ def main():
     device = config.DEVICE
     print(device)
     if config.MODEL_SIZE == "small":
-        model = TwoHeadGATSmall(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
+        model = TwoHeadGATSmall(in_dim=len(dataset[0].x[0]), edge_feat_dim=2, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
         print("\n\nSmall Model Used...\n\n")
     else:
-        model = TwoHeadGAT(in_dim=len(dataset[0].x[0]), edge_feat_dim=1, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
+        model = TwoHeadGAT(in_dim=len(dataset[0].x[0]), edge_feat_dim=2, hidden_dim=config.HIDDEN_DIM, num_actions=config.NUM_ACTIONS).to(device)
         print("\n\nMedium Model Used...\n\n")
 
     print("Exists:", os.path.exists(config.CHECKPOINT_PATH))
@@ -87,9 +87,14 @@ def main():
 
     # Epoch loop
     for epoch in tqdm(range(config.NUM_EPOCHS), desc="Training Epochs"):
+        # if epoch > 1:
+        #     train_loss, wire_acc, wire_f1, wire_loss, action_acc, action_f1, action_loss = train(model, train_loader, optimizer, criterion, device=device, epoch_cond=True)
+        #     val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss, cf_data = validate(model, val_loader, criterion, device=device, epoch_cond=True)
+        # else:
+        #     train_loss, wire_acc, wire_f1, wire_loss, action_acc, action_f1, action_loss = train(model, train_loader, optimizer, criterion, device=device, epoch_cond=False)
+        #     val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss, cf_data = validate(model, val_loader, criterion, device=device)
         train_loss, wire_acc, wire_f1, wire_loss, action_acc, action_f1, action_loss = train(model, train_loader, optimizer, criterion, device=device)
         val_loss, wire_val_acc, wire_val_f1, wire_val_loss, action_val_acc, action_val_f1, action_val_loss, cf_data = validate(model, val_loader, criterion, device=device)
-        
         current_lr = optimizer.param_groups[0]['lr']
         print(f"\nEpoch {epoch+1}, LR={current_lr:.5f}:\n"
               f"Training loss {train_loss:.4f},\nWire Acc {wire_acc:.4f}, Wire F1 {wire_f1:.4f}, Wire Loss {wire_loss:.4f},\n"
